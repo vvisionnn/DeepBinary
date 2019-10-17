@@ -1,5 +1,3 @@
-import shutil
-
 import cv2
 import numpy as np
 
@@ -33,7 +31,9 @@ def load_image(img_path):
 
     cv2.waitKey()
 
-
+# import shutil
+#
+#
 # src = "/Users/zw/Downloads/dataset/"
 # dst = "/Users/zw/Documents/py36/Deep_binary/test_cv/test_images/"
 #
@@ -47,4 +47,3 @@ def load_image(img_path):
 load_image("test_images/124_in.png")
 
 cv2.destroyAllWindows()
-

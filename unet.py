@@ -92,7 +92,7 @@ def unet():
     """Create U-net."""
     inputs = Input((256, 256, 1))
 
-    # Downsampling.
+    # DownSampling.
     down1, pool1 = down_layer(inputs, 32)
     down2, pool2 = down_layer(pool1, 64)
     down3, pool3 = down_layer(pool2, 128)
@@ -102,7 +102,7 @@ def unet():
     # Bottleneck.
     bottleneck = double_conv_layer(pool5, 1024)
 
-    # Upsampling.
+    # UpSampling.
     up5 = up_layer(bottleneck, down5, 512)
     up4 = up_layer(up5, down4, 256)
     up3 = up_layer(up4, down3, 128)
