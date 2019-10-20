@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow import keras
 
 
-# model version 0.2
+# model version 0.6
 def double_conv(inputs, filters: int):
     conv_1 = keras.layers.Conv2D(filters, (3, 3), padding='same', kernel_initializer='he_normal')(inputs)
     conv_relu_1 = keras.layers.Activation('relu')(conv_1)
