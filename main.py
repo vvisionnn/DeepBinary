@@ -1,80 +1,69 @@
-from tensorflow import keras
+# 实现思路：首先使用 opencv 读取图片转成灰度
+# 然后使用 OTSU 二值化输入图
+# 将图片分割 predict，并替换原位置
 
-from Deep_binary.dataset.load_dataset import load_dataset
-from Deep_binary.model.unet_model import unet_little
-from Deep_binary.loss.loss import dice_2_coef, dice_coef
+import cv2
+import tensorflow as tf
+import numpy as np
+
+from loss.loss_function import dice_coef, dice_2_coef
+from model.unet_model import unet_little
+
+# define super parameters
+IMG_HEIGHT = 256
+IMG_WEIGHT = 256
+BATCH_SIZE = 16
+TRAIN_TEST_SPLIT = 0.7
 
 
-if __name__ == '__main__':
-    ds = load_dataset("dataset")
-    model = unet_little()
-    model.summary()
-
-    callbacks_list = [
-        keras.callbacks.EarlyStopping(
-            monitor='acc',
-            patience=2
-        ),
-        keras.callbacks.ModelCheckpoint(
-            filepath='deep_binary.h5',
-            monitor='loss',
-            save_best_only=True
-        )
-    ]
-
-    model.compile(
-        optimizer=keras.optimizers.Adam(learning_rate=1e-4),
-        loss='binary_crossentropy',
-        callbacks=callbacks_list,
-        metrics=['accuracy', dice_coef, dice_2_coef]
+def read_tensor(img_path):
+    img = cv2.cvtColor(
+        cv2.imread(img_path),
+        cv2.COLOR_BGR2GRAY
     )
+    # binary image by OTSU
+    _, img = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)
+    # print(img.shape)
+    # print(img)
+    return img / 255.0
 
-    history = model.fit(ds, epochs=30, steps_per_epoch=100)
+def predict_image(img_path):
+    in_image = read_tensor(img_path)
+    # get image height and width
+    origin_img_height = in_image.shape[0]
+    origin_img_width = in_image.shape[1]
+
+    height = (origin_img_height // 255 + 1) * 255 + 1
+    width = (origin_img_width // 255 + 1) * 255 + 1
+    out_image = np.zeros((height, width))
+    out_image[:origin_img_height, :origin_img_width] = in_image
+    in_image = out_image
+    in_image = np.expand_dims(in_image, axis=2)
+    out_image_2 = np.zeros((height, width))
+    pre_row, pre_line = 0, 0
+    for row in range(IMG_HEIGHT, height, IMG_HEIGHT):
+        for line in range(IMG_WEIGHT, width, IMG_WEIGHT):
+            # print(f"[{pre_row}:{row}, {pre_line}:{line}]")
+            in_img = tf.cast(in_image[pre_row:row, pre_line:line], tf.float32)
+            in_img = tf.expand_dims(in_img, axis=0)
+            pre_img = model.predict(in_img)
+            pre_img = tf.squeeze(pre_img)
+            out_image_2[pre_row:row, pre_line:line] =  pre_img * 255.0
+            pre_line = line if origin_img_width - line > IMG_WEIGHT else 0
+        pre_row = row if origin_img_height - row > IMG_HEIGHT else 0
+    return np.asarray(out_image_2[:origin_img_height, :origin_img_width], np.uint8)
 
 
-# from Deep_binary.model.unet_model import unet
-# import cv2
-# import numpy as np
-# import tensorflow as tf
-#
-# model = unet()
-#
-# model.load_weights("/Users/zw/Downloads/version_0.6_weights.h5")
-# # model.summary()
-#
-#
-# def get_in_image(img_path):
-#     img = cv2.cvtColor(
-#         cv2.imread(img_path),
-#         cv2.COLOR_BGR2GRAY
-#     )
-#
-#     img_out = np.zeros(shape=img.shape)
-#
-#     # cut in image
-#     origin_img_height = img.shape[0]
-#     origin_img_weight = img.shape[1]
-#     pre_row, pre_line = 0, 0
-#     for row in range(256, origin_img_height, 256):
-#         for line in range(256, origin_img_weight, 256):
-#             model_in = img[pre_row:row, pre_line:line] / 255.0
-#             model_in = np.expand_dims(model_in, axis=2)
-#             model_in = np.expand_dims(model_in, axis=0)
-#             model_in = tf.convert_to_tensor(model_in)
-#             model_in = model.predict(model_in)
-#             img_out[pre_row:row, pre_line:line] = np.squeeze(model_in) * 255.0
-#             pre_line = line if origin_img_weight - line > 256 else 0
-#         pre_row = row if origin_img_height - row > 256 else 0
-#
-#     cv2.namedWindow("Origin", cv2.WINDOW_NORMAL)
-#     cv2.imshow("Origin", img)
-#     cv2.namedWindow("After processing", cv2.WINDOW_NORMAL)
-#     cv2.imshow("After processing", img_out)
-#     cv2.waitKey()
-#
-#     cv2.destroyAllWindows()
-#
-#
-# get_in_image("/Users/zw/Downloads/dataset/332_in.png")
-#
-#
+model = unet_little()
+model.compile(
+    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+    loss='binary_crossentropy',
+    metrics=['accuracy', dice_coef, dice_2_coef]
+)
+
+model.load_weights("save_models/deep_binary_ver0.9_best_loss.h5")
+
+img = predict_image("999.jpeg")
+print(img.shape)
+cv2.imwrite('123.jpeg', img)
+
