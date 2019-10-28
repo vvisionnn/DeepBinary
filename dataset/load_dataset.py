@@ -10,7 +10,7 @@ import numpy as np
 # define super parameters
 IMG_HEIGHT = 256
 IMG_WEIGHT = 256
-BATCH_SIZE = 16
+BATCH_SIZE = 8
 TRAIN_TEST_SPLIT = 0.7
 
 
@@ -31,8 +31,9 @@ def read_tensor(img_path):
         cv2.imread(img_path),
         cv2.COLOR_BGR2GRAY
     )
+    # print(f"img.shape={img.shape}")
     # binary image by OTSU
-    _, img = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)
+    # _, img = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)
     img = tf.expand_dims(img, axis=2)
     # cast opencv type to tf.tensor
     img = tf.cast(img, tf.float32)

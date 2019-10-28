@@ -1,13 +1,9 @@
-# 实现思路：首先使用 opencv 读取图片转成灰度
-# 然后使用 OTSU 二值化输入图
-# 将图片分割 predict，并替换原位置
-
 import cv2
 import tensorflow as tf
 import numpy as np
 
-from loss.loss_function import dice_coef, dice_2_coef
-from model.unet_model import unet_little
+from loss.loss import dice_coef, dice_2_coef
+from model.unet_model import unet_little, unet
 
 # define super parameters
 IMG_HEIGHT = 256
@@ -22,7 +18,7 @@ def read_tensor(img_path):
         cv2.COLOR_BGR2GRAY
     )
     # binary image by OTSU
-    _, img = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)
+    # _, img = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)
     # print(img.shape)
     # print(img)
     return img / 255.0
@@ -54,16 +50,18 @@ def predict_image(img_path):
     return np.asarray(out_image_2[:origin_img_height, :origin_img_width], np.uint8)
 
 
-model = unet_little()
+model = unet()
 model.compile(
     optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
     loss='binary_crossentropy',
     metrics=['accuracy', dice_coef, dice_2_coef]
 )
 
-model.load_weights("save_models/deep_binary_ver0.9_best_loss.h5")
+model.load_weights("save_models/deep_binary_ver0.95.h5")
+# model.load_weights("save_models/deep_binary_ver0.9_best_dice.h5")
+# model.load_weights("save_models/deep_binary_ver0.9_best_dice_2.h5")
 
-img = predict_image("999.jpeg")
+img = predict_image("dataset/all/145_in.png")
 print(img.shape)
-cv2.imwrite('123.jpeg', img)
+cv2.imwrite('145.png', img)
 
